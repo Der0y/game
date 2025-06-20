@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<title>เกมปลูกผัก</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #e0f2f1;
+    padding: 20px;
+    text-align: center;
+  }
+  h1 {
+    color: #388e3c;
+  }
+  #score {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  #character-section {
+    margin-bottom: 20px;
+  }
+  .character {
+    font-size: 40px;
+    cursor: pointer;
+    margin: 0 8px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    transition: border-color 0.3s;
+  }
+  .character.selected {
+    border-color: #f57c00;
+  }
+  #plots {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin-bottom: 20px;
+  }
+  .plot {
+    border: 2px solid #00796b;
+    padding: 10px;
+    width: 250px;
+    min-height: 180px;
+  }
+  .plot-header {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .plant-slot {
+    border: 1px dashed #00695c;
+    height: 30px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 24px;
+  }
+  select {
+    margin: 0 10px;
+    padding: 5px;
+    font-size: 16px;
+  }
+  #plant-buttons {
+    margin-top: 10px;
+  }
+  button {
+    margin: 0 8px;
+    padding: 8px 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background-color: #66bb6a;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  button:hover {
+    background-color: #81c784;
+  }
+  #message {
+    margin-top: 15px;
+    font-size: 18px;
+    color: #d32f2f;
+  }
+  #game-over {
+    display: none;
+    margin-top: 30px;
+  }
+  #game-over h2 {
+    color: #d32f2f;
+  }
+</style>
+</head>
+<body>
+
+<h1>เกมปลูกผัก 🌱</h1>
+<div id="score">คะแนน: 0</div>
+
+<div id="character-section">
+  <div>เลือกตัวละคร : 
+    <span class="character" data-char="🐶">🐶</span>
+    <span class="character" data-char="🐱">🐱</span>
+    <span class="character" data-char="🦊">🦊</span>
+    <span class="character" data-char="🐻">🐻</span>
+    <span class="character" data-char="🐼">🐼</span>
+  </div>
+  <div style="margin-top:10px;">ตัวละครที่เลือก: <span id="selected-character">--</span></div>
+</div>
+
+<div style="margin-top:20px;">
+  <div>เลือกแปลงปลูกผัก</div>
+  <select id="plot-select">
+    <option value="1">แปลง 1</option>
+    <option value="2">แปลง 2</option>
+  </select>
+  <div style="margin-top:10px;">เลือกผัก : 
+    <button data-plant="🥕">🥕</button>
+    <button data-plant="🥬">🥬</button>
+    <button data-plant="🎋">🎋</button>
+  </div>
+  <div id="plant-buttons" style="margin-top:10px;">
+    <button id="plant-btn">ปลูกผักที่เลือก</button>
+  </div>
+</div>
+
+<div id="plots">
+  <div class="plot" id="plot1">
+    <div class="plot-header">แปลงที่ 1</div>
+    <div class="plant-slot" data-plot="1" data-index="0"></div>
+    <div class="plant-slot" data-plot="1" data-index="1"></div>
+    <div class="plant-slot" data-plot="1" data-index="2"></div>
+    <div class="plant-slot" data-plot="1" data-index="3"></div>
+    <div class="plant-slot" data-plot="1" data-index="4"></div>
+  </div>
+  <div class="plot" id="plot2" style="margin-left:50px;">
+    <div class="plot-header">แปลงที่ 2</div>
+    <div class="plant-slot" data-plot="2" data-index="0"></div>
+    <div class="plant-slot" data-plot="2" data-index="1"></div>
+    <div class="plant-slot" data-plot="2" data-index="2"></div>
+    <div class="plant-slot" data-plot="2" data-index="3"></div>
+    <div class="plant-slot" data-plot="2" data-index="4"></div>
+  </div>
+</div>
+
+<div id="message"></div>
+<div id="game-over">
+  <h2>เกมจบ! คะแนนของคุณ: <span id="final-score"></span></h2>
+  <button id="restart-btn">เริ่มเกมใหม่</button>
+</div>
+
+<script>
+  // ตัวแปรตั้งต้น
+  const characters = ["🐶","🐱","🦊","🐻","🐼"];
+  let selectedCharacter = null;
+  let score = 0;
+  const maxScore = 100;
+
+  // สำหรับเก็บข้อมูลผักในแต่ละแปลง
+  const plotsData = {
+    1: [],
+    2: []
+  };
+
+  const maxPlantsPerPlot = 5;
+  const growDuration = 10000; // 10 วินาที
+  let currentPlant = null;
+  let currentPlotNumber = 1;
+  let currentSelectPlant = null;
+  let timers = [];
+
+  // อัปเดตคะแนน
+  function updateScore() {
+    document.getElementById('score').innerText = 'คะแนน: ' + score;
+    if (score >= maxScore) {
+      endGame();
+    }
+  }
+
+  function endGame() {
+    document.getElementById('game-over').style.display = 'block';
+    document.getElementById('final-score').innerText = score;
+    // ล้างผักในแต่ละแปลง
+    for(let p in plotsData){
+      plotsData[p] = [];
+    }
+    // หยุด Timer ทั้งหมด
+    clearAllTimers();
+  }
+
+  // รีเซ็ตเกม
+  function restart() {
+    score = 0;
+    updateScore();
+    document.getElementById('game-over').style.display = 'none';
+    // ล้างผัก
+    document.querySelectorAll('.plant-slot').forEach(el => {
+      el.innerHTML = '';
+    });
+    // รีเซ็ตข้อมูลผักในแปลง
+    for(let p in plotsData) {
+      plotsData[p] = [];
+    }
+    clearAllTimers();
+    message.innerText = '';
+  }
+
+  // เคลียร์ Timer ทั้งหมด
+  function clearAllTimers() {
+    timers.forEach(t => clearTimeout(t));
+    timers = [];
+  }
+
+  // เลือกตัวละคร
+  document.querySelectorAll('.character').forEach(span => {
+    span.onclick = () => {
+      document.querySelectorAll('.character').forEach(s => s.classList.remove('selected'));
+      span.classList.add('selected');
+      selectedCharacter = span.dataset.char;
+      document.getElementById('selected-character').innerText = selectedCharacter;
+    };
+  });
+
+  // เลือกผัก
+  document.querySelectorAll('button[data-plant]').forEach(btn => {
+    btn.onclick = () => {
+      currentSelectPlant = btn.dataset.plant;
+      message.innerText = 'คุณเลือกปลูก: ' + currentSelectPlant;
+    };
+  });
+
+  // ปลูกผัก
+  document.getElementById('plant-btn').onclick = () => {
+    if (!selectedCharacter) {
+      alert('กรุณาเลือกตัวละครก่อน!');
+      return;
+    }
+    if (!currentSelectPlant) {
+      alert('กรุณาเลือกผักที่จะปลูก!');
+      return;
+    }
+    const plotNumber = document.getElementById('plot-select').value;
+    const plotSlots = document.querySelectorAll(`#plot${plotNumber} .plant-slot`);
+    // หาจุดว่าง
+    let planted = false;
+    for (let slot of plotSlots) {
+      if (slot.innerHTML === '') {
+        // เช็กจำนวนผักปลูกในแปลง
+        if (plotsData[plotNumber].length >= maxPlantsPerPlot) {
+          alert('แปลงนี้ปลูกได้สูงสุดแล้ว!');
+          break;
+        }
+        // ปลูกผัก
+        slot.innerHTML = currentSelectPlant + ' ' + selectedCharacter;
+        // บันทึกลงข้อมูล
+        plotsData[plotNumber].push({plant: currentSelectPlant, slot: slot});
+        // ตั้งเวลาเติบโต
+        const t = setTimeout(() => {
+          harvestPlant(plotNumber, slot);
+        }, growDuration);
+        timers.push(t);
+        planted = true;
+        break;
+      }
+    }
+    if (!planted) {
+      alert('ไม่มีพื้นที่ว่างในแปลงนี้');
+    }
+  };
+
+  // เก็บเกี่ยวผัก
+  function harvestPlant(plotNumber, slot) {
+    // ยืนยันว่าผักยังอยู่
+    if (slot.innerHTML !== '') {
+      // เพิ่มคะแนน
+      score++;
+      updateScore();
+      // ลบผัก
+      slot.innerHTML = '';
+      // ลบข้อมูลใน array
+      let index = plotsData[plotNumber].findIndex(p => p.slot === slot);
+      if (index !== -1) {
+        plotsData[plotNumber].splice(index,1);
+      }
+    }
+  }
+
+  // ให้คลิกที่จุดปลูกผักเพื่อปลูก
+  document.querySelectorAll('.plant-slot').forEach(slot => {
+    slot.onclick = () => {
+      const plotNumber = slot.dataset.plot;
+      // ตรวจสอบว่าผักซ้ำจุดนี้
+      // ปลูก
+      // เช็กว่าปลูกได้ไหม
+      if (plotsData[plotNumber].length >= maxPlantsPerPlot) {
+        alert('แปลงนี้ปลูกได้สูงสุดแล้ว!');
+        return;
+      }
+      // ปลูกผัก
+      if (slot.innerHTML === '') {
+        if (!selectedCharacter || !currentSelectPlant) {
+          alert('กรุณาเลือกตัวละครและผักก่อน!');
+          return;
+        }
+        slot.innerHTML = currentSelectPlant + ' ' + selectedCharacter;
+        plotsData[plotNumber].push({plant: currentSelectPlant, slot: slot});
+        const t = setTimeout(() => {
+          harvestPlant(plotNumber, slot);
+        }, growDuration);
+        timers.push(t);
+      } else {
+        alert('จุดนี้ปลูกแล้ว!');
+      }
+    };
+  });
+
+  document.getElementById('restart-btn').onclick = restart;
+
+  // เริ่มเกมครั้งแรก
+  restart();
+
+</script>
+</body>
+</html>
